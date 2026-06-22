@@ -8,6 +8,8 @@ import pandas as pd
 import matplotlib.pyplot as plt
 import streamlit as st
 from jinja2 import Environment, FileSystemLoader
+import shutil
+import uuid
 
 
 BASE_DIR = Path(__file__).parent
@@ -50,19 +52,33 @@ def render_latex(context, output_tex_path):
         comment_end_string="=))",
     )
 
-    template = env.get_template("report.tex.j2")
+    template = env.get_template("experiment_template.tex.j2")
     output_tex_path.write_text(template.render(context), encoding="utf-8")
 
 
 def compile_pdf(tex_path):
-    subprocess.run(
-        ["latexmk", "-pdf", "-interaction=nonstopmode", str(tex_path)],
+    result = subprocess.run(
+        ["pdflatex", "-interaction=nonstopmode", str(tex_path.name)],
         cwd=tex_path.parent,
-        check=True,
+        capture_output=True,
+        text=True,
     )
+
+    if result.returncode != 0:
+        raise RuntimeError(result.stdout + "\n" + result.stderr)
 
     return tex_path.with_suffix(".pdf")
 
+def save_uploaded_file(uploaded_file, destination_folder):
+    destination_folder.mkdir(parents=True, exist_ok=True)
+
+    safe_name = uploaded_file.name.replace(" ", "_")
+    output_path = destination_folder / safe_name
+
+    with open(output_path, "wb") as f:
+        f.write(uploaded_file.getbuffer())
+
+    return output_path
 
 def upload_to_google_drive(pdf_path):
     """
@@ -86,51 +102,131 @@ def upload_to_google_drive(pdf_path):
 
 st.set_page_config(page_title="PDF Report Generator", layout="centered")
 
-st.title("PDF Report Generator")
+st.title("Experiment Report Generator")
 
 report_date = st.date_input("Report date", value=date.today())
-title = st.text_input("Report title")
-detail_1 = st.text_input("Detail 1")
-detail_2 = st.text_input("Detail 2")
-detail_3 = st.text_area("Additional notes")
 
-csv_file = st.file_uploader("Upload CSV", type=["csv"])
+report_type = st.selectbox(
+    "Type of report",
+    ["Experiment", "Design", "Simulation"]
+)
+
+subteam = st.selectbox(
+    "Subteam",
+    ["Avionics", "Structures", "Propulsion"]
+)
+
+experiment_number = st.text_input("Experiment number")
+experiment_type = st.text_input("Type of experiment")
+report_author = st.text_input("Report author")
+participants = st.text_area("Participants")
+
+details = st.text_area("Details")
+
+csv_file = st.file_uploader("Upload CSV (optional)", type=["csv"])
+
+image_files = st.file_uploader(
+    "Upload image(s) (optional)",
+    type=["png", "jpg", "jpeg", "webp", "bmp", "gif", "tiff", "tif"],
+    accept_multiple_files=True,
+)
+
+SUBTEAM_CODES = {
+    "Avionics": "A",
+    "Structures": "S",
+    "Propulsion": "P",
+}
+
+REPORT_CODES = {
+    "Experiment": "E",
+    "Design": "D",
+    "Simulation": "S",
+}
+
+report_code = (
+    "R"
+    + SUBTEAM_CODES[subteam]
+    + REPORT_CODES[report_type]
+    + "_"
+    + experiment_number.strip()
+)
+
+title = report_code
+
+st.info(f"Report ID: {report_code}")
 
 if st.button("Generate PDF"):
     if not title:
         st.error("Please enter a title.")
-    elif csv_file is None:
-        st.error("Please upload a CSV file.")
     else:
+        submission_id = uuid.uuid4().hex[:8]
+        safe_title = title.replace(" ", "_").replace("/", "_")
+
+        submission_folder = OUTPUT_DIR / f"{safe_title}_{submission_id}"
+        documents_folder = submission_folder / "submitted_documents"
+
+        submission_folder.mkdir(parents=True, exist_ok=True)
+        documents_folder.mkdir(parents=True, exist_ok=True)
+
         with tempfile.TemporaryDirectory() as tmpdir:
             tmpdir = Path(tmpdir)
 
-            chart_path = tmpdir / "chart.png"
-            tex_path = tmpdir / "report.tex"
+            chart_path = None
+            tex_path = tmpdir / "experiment_template.tex"
 
-            df = generate_chart(csv_file, chart_path)
+            table_rows = []
+            table_columns = []
+
+            # Optional CSV handling
+            if csv_file is not None:
+                saved_csv_path = save_uploaded_file(csv_file, documents_folder)
+                chart_path = tmpdir / "chart.png"
+                df = generate_chart(saved_csv_path, chart_path)
+
+                table_rows = df.head(20).to_dict(orient="records")
+                table_columns = list(df.columns)
+
+            # Optional image handling
+            saved_image_paths = []
+            if image_files:
+                for image_file in image_files:
+                    saved_image_path = save_uploaded_file(image_file, documents_folder)
+                    saved_image_paths.append(saved_image_path)
 
             context = {
                 "report_date": report_date.strftime("%d %B %Y"),
-                "title": title,
-                "detail_1": detail_1,
-                "detail_2": detail_2,
-                "detail_3": detail_3,
-                "chart_path": chart_path.as_posix(),
-                "table_rows": df.head(20).to_dict(orient="records"),
-                "table_columns": list(df.columns),
+                "report_type": report_type,
+                "subteam": subteam,
+                "experiment_number": experiment_number,
+                "experiment_type": experiment_type,
+                "report_author": report_author,
+                "participants": participants,
+                "details": details,
+                "has_csv": csv_file is not None,
+                "chart_path": chart_path.as_posix() if chart_path else "",
+                "table_rows": table_rows,
+                "table_columns": table_columns,
+                "has_images": len(saved_image_paths) > 0,
+                "image_paths": [p.as_posix() for p in saved_image_paths],
             }
 
             render_latex(context, tex_path)
 
             try:
+                shutil.copy(
+                    BASE_DIR / "static" / "Eirspace_Logo.png",
+                    tmpdir / "Eirspace_Logo.png"
+                )
                 pdf_path = compile_pdf(tex_path)
-                final_pdf = OUTPUT_DIR / f"{title.replace(' ', '_')}.pdf"
+
+                final_pdf = submission_folder / f"{safe_title}.pdf"
                 final_pdf.write_bytes(pdf_path.read_bytes())
 
-                upload_to_google_drive(final_pdf)
-
                 st.success("PDF generated successfully.")
+
+                st.write(f"Submission folder created:")
+                st.code(str(submission_folder))
+
                 st.download_button(
                     "Download PDF",
                     data=final_pdf.read_bytes(),
@@ -138,5 +234,6 @@ if st.button("Generate PDF"):
                     mime="application/pdf",
                 )
 
-            except subprocess.CalledProcessError:
-                st.error("LaTeX compilation failed. Check your template.")
+            except Exception as e:
+                st.error("LaTeX compilation failed.")
+                st.code(str(e))
