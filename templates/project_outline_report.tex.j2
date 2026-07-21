@@ -1,50 +1,92 @@
 \documentclass[11pt,a4paper]{article}
 
-\usepackage[margin=1.8cm]{geometry}
+\usepackage[
+    top=1.6cm,
+    bottom=1.7cm,
+    left=1.6cm,
+    right=1.6cm,
+    columnsep=0.7cm
+]{geometry}
+
 \usepackage{graphicx}
 \usepackage{array}
 \usepackage{float}
 \usepackage{fancyhdr}
 \usepackage{parskip}
-\usepackage{tabularx}
+\usepackage{caption}
+\usepackage{multicol}
+\usepackage{titlesec}
 \usepackage[
     pdftitle={((( full_report_name | latex_escape )))},
     pdfauthor={((( report_author | latex_escape )))}
 ]{hyperref}
+
 \pagestyle{fancy}
 \fancyhf{}
-\lhead{((( report_code | latex_escape )))}
-\rhead{Project Outline}
+\lhead{\small ((( report_code | latex_escape )))}
+\rhead{\small Project Outline Report}
 \cfoot{\thepage}
 
 \setlength{\parindent}{0pt}
+\setlength{\parskip}{0.55em}
+\setlength{\columnsep}{0.7cm}
+\setlength{\emergencystretch}{2em}
+
+\sloppy
+
+\titlespacing*{\section}{0pt}{0.8em}{0.35em}
+\titleformat{\section}
+    {\large\bfseries}
+    {}
+    {0pt}
+    {}
+
+\captionsetup{
+    font=small,
+    skip=3pt
+}
 
 \begin{document}
 
-\begin{minipage}[t]{0.72\textwidth}
-    {\LARGE\textbf{Project Outline}}\\[0.3em]
-    {\large ((( report_title | latex_escape )))}
+% ---------------- Full-width title ----------------
+
+\begin{minipage}[t]{0.84\textwidth}
+    {\LARGE\textbf{
+        ((( report_code | latex_escape )))
+        --
+        ((( report_title | latex_escape )))
+    }}\\[0.3em]
+
+    {\large Project Outline Report}
 \end{minipage}
 \hfill
-\begin{minipage}[t]{0.24\textwidth}
+\begin{minipage}[t]{0.12\textwidth}
     \raggedleft
-((* if logo_path *))
+
+    ((* if logo_path *))
     \includegraphics[
-        width=0.9\linewidth,
-        height=2.2cm,
+        width=1.2cm,
+        height=1.2cm,
         keepaspectratio
     ]{((( logo_path )))}
-((* endif *))
+    ((* endif *))
 \end{minipage}
 
-\vspace{1em}
+\vspace{0.5em}
 \hrule
-\vspace{1em}
+\vspace{0.6em}
 
-\begin{tabularx}{\textwidth}{
+% ---------------- Two-column report text ----------------
+
+\begin{multicols}{2}
+
+\small
+\renewcommand{\arraystretch}{1.1}
+
+\begin{tabular}{
     @{}
-    >{\bfseries}p{4cm}
-    X
+    >{\bfseries}p{2.3cm}
+    p{\dimexpr\columnwidth-2.3cm\relax}
     @{}
 }
 Report ID: &
@@ -53,52 +95,76 @@ Report ID: &
 Department: &
 ((( department | latex_escape ))) \\
 
-Report author: &
+Author: &
 ((( report_author | latex_escape ))) \\
 
-Person responsible: &
+Responsible: &
 ((( sections.responsible_person | latex_escape ))) \\
 
-Supporting members: &
-((( sections.supporting_members | latex_escape ))) \\
+Target date: &
+((( sections.target_completion_date | latex_escape ))) \\
 
-Date of report: &
-((( report_date | latex_escape ))) \\
-
-Target completion date: &
-((( sections.target_date | latex_escape ))) \\
-
-Current status: &
+Status: &
 ((( sections.status | latex_escape ))) \\
-\end{tabularx}
+\end{tabular}
+
+\normalsize
+\vspace{0.4em}
 
 \section*{Main Goal}
-
 ((( sections.main_goal | latex_escape )))
 
-\section*{Short Description}
-
+\section*{Project Description}
 ((( sections.description | latex_escape )))
 
-((* if sections.notes *))
-\section*{Additional Notes}
+\section*{Supporting Members}
+((( sections.supporting_members | latex_escape )))
 
+\section*{Notes}
 ((( sections.notes | latex_escape )))
+
+\end{multicols}
+
+% ---------------- Full-width graph ----------------
+
+((* if has_csv and chart_path *))
+\vfill
+
+\begin{center}
+    \includegraphics[
+        width=0.94\textwidth,
+        height=4.0cm,
+        keepaspectratio
+    ]{((( chart_path )))}
+
+    \vspace{0.15em}
+
+    {\small Figure 1: Project data generated from the uploaded CSV file.}
+\end{center}
 ((* endif *))
 
+% ---------------- Images on following pages ----------------
+
 ((* if has_images *))
-\section*{Supporting Images}
+\clearpage
+
+\section*{Project Images}
+
+\begin{multicols}{2}
 
 ((* for image_path in image_paths *))
-\begin{figure}[H]
-    \centering
+\begin{center}
     \includegraphics[
-        width=0.85\textwidth,
-        height=0.6\textheight,
+        width=0.95\columnwidth,
+        height=4.8cm,
         keepaspectratio
     ]{((( image_path )))}
-\end{figure}
+\end{center}
+
+\vspace{0.3em}
 ((* endfor *))
+
+\end{multicols}
 ((* endif *))
 
 \end{document}

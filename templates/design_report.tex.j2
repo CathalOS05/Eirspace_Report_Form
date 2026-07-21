@@ -1,100 +1,167 @@
 \documentclass[11pt,a4paper]{article}
 
-\usepackage[margin=1.8cm]{geometry}
+\usepackage[
+    top=1.6cm,
+    bottom=1.7cm,
+    left=1.6cm,
+    right=1.6cm,
+    columnsep=0.7cm
+]{geometry}
+
 \usepackage{graphicx}
-\usepackage{booktabs}
 \usepackage{array}
 \usepackage{float}
 \usepackage{fancyhdr}
 \usepackage{parskip}
+\usepackage{caption}
+\usepackage{multicol}
+\usepackage{titlesec}
 \usepackage[
     pdftitle={((( full_report_name | latex_escape )))},
     pdfauthor={((( report_author | latex_escape )))}
 ]{hyperref}
+
 \pagestyle{fancy}
 \fancyhf{}
-\lhead{((( report_code | latex_escape )))}
-\rhead{Design Report}
+\lhead{\small ((( report_code | latex_escape )))}
+\rhead{\small Design Report}
 \cfoot{\thepage}
 
 \setlength{\parindent}{0pt}
+\setlength{\parskip}{0.55em}
+\setlength{\columnsep}{0.7cm}
+\setlength{\emergencystretch}{2em}
+
+\sloppy
+
+\titlespacing*{\section}{0pt}{0.8em}{0.35em}
+\titleformat{\section}
+    {\large\bfseries}
+    {}
+    {0pt}
+    {}
+
+\captionsetup{
+    font=small,
+    skip=3pt
+}
 
 \begin{document}
 
-\begin{minipage}{0.72\textwidth}
-    {\LARGE\textbf{Design Report}}\\[0.3em]
-    {\large ((( report_title | latex_escape )))}
+% ---------------- Full-width title ----------------
+
+\begin{minipage}[t]{0.84\textwidth}
+    {\LARGE\textbf{
+        ((( report_code | latex_escape )))
+        --
+        ((( report_title | latex_escape )))
+    }}\\[0.3em]
+
+    {\large Design Report}
 \end{minipage}
-\begin{minipage}{0.26\textwidth}
+\hfill
+\begin{minipage}[t]{0.12\textwidth}
     \raggedleft
+
     ((* if logo_path *))
-    \includegraphics[width=0.9\linewidth]{((( logo_path )))}
+    \includegraphics[
+        width=1.2cm,
+        height=1.2cm,
+        keepaspectratio
+    ]{((( logo_path )))}
     ((* endif *))
 \end{minipage}
 
-\vspace{1em}
+\vspace{0.5em}
 \hrule
-\vspace{1em}
+\vspace{0.6em}
 
-\begin{tabular}{@{}ll@{}}
-\textbf{Report ID:} & ((( report_code | latex_escape ))) \\
-\textbf{Department:} & ((( department | latex_escape ))) \\
-\textbf{Author:} & ((( report_author | latex_escape ))) \\
-\textbf{Participants:} & ((( participants | latex_escape ))) \\
-\textbf{Date:} & ((( report_date | latex_escape ))) \\
+% ---------------- Two-column report text ----------------
+
+\begin{multicols}{2}
+
+\small
+\renewcommand{\arraystretch}{1.1}
+
+\begin{tabular}{
+    @{}
+    >{\bfseries}p{2.1cm}
+    p{\dimexpr\columnwidth-2.1cm\relax}
+    @{}
+}
+Report ID: &
+((( report_code | latex_escape ))) \\
+
+Department: &
+((( department | latex_escape ))) \\
+
+Author: &
+((( report_author | latex_escape ))) \\
+
+Participants: &
+((( participants | latex_escape ))) \\
+
+Date: &
+((( report_date | latex_escape ))) \\
 \end{tabular}
 
-\section*{Design Goal}
-((( sections.goal | latex_escape )))
+\normalsize
+\vspace{0.4em}
 
-\section*{Key Requirements}
+\section*{Design Goal}
+((( sections.design_goal | latex_escape )))
+
+\section*{Requirements}
 ((( sections.requirements | latex_escape )))
 
 \section*{Selected Design}
-((( sections.design | latex_escape )))
+((( sections.selected_design | latex_escape )))
 
-\section*{Verification and Next Action}
+\section*{Verification}
 ((( sections.verification | latex_escape )))
 
-((* if has_csv *))
-\section*{Supporting Data}
+\end{multicols}
 
-\begin{figure}[H]
-    \centering
-    \includegraphics[width=0.9\textwidth]{((( chart_path )))}
-    \caption{Chart generated from the uploaded CSV file.}
-\end{figure}
+% ---------------- Full-width graph ----------------
 
-((* if table_rows *))
-\begin{table}[H]
-\centering
-\small
-\begin{tabular}{((* for column in table_columns *))l((* endfor *))}
-\toprule
-((* for column in table_columns *))
-\textbf{((( column | latex_escape )))}((* if not loop.last *)) & ((* endif *))
-((* endfor *)) \\
-\midrule
-((* for row in table_rows *))
-((* for column in table_columns *))
-((( row[column] | latex_escape )))((* if not loop.last *)) & ((* endif *))
-((* endfor *)) \\
-((* endfor *))
-\bottomrule
-\end{tabular}
-\end{table}
+((* if has_csv and chart_path *))
+\vfill
+
+\begin{center}
+    \includegraphics[
+        width=0.94\textwidth,
+        height=4.0cm,
+        keepaspectratio
+    ]{((( chart_path )))}
+
+    \vspace{0.15em}
+
+    {\small Figure 1: Design data generated from the uploaded CSV file.}
+\end{center}
 ((* endif *))
-((* endif *))
+
+% ---------------- Images on following pages ----------------
 
 ((* if has_images *))
-\section*{Drawings and Images}
+\clearpage
+
+\section*{Design Images}
+
+\begin{multicols}{2}
 
 ((* for image_path in image_paths *))
-\begin{figure}[H]
-    \centering
-    \includegraphics[width=0.9\textwidth,height=0.7\textheight,keepaspectratio]{((( image_path )))}
-\end{figure}
+\begin{center}
+    \includegraphics[
+        width=0.95\columnwidth,
+        height=4.8cm,
+        keepaspectratio
+    ]{((( image_path )))}
+\end{center}
+
+\vspace{0.3em}
 ((* endfor *))
+
+\end{multicols}
 ((* endif *))
 
 \end{document}

@@ -256,10 +256,10 @@ def generate_chart(csv_path, output_path):
             "The CSV must contain at least two columns."
         )
 
-    x_column = dataframe.columns[0]
-    y_column = dataframe.columns[1]
+    x_column = dataframe.columns[1]
+    y_column = dataframe.columns[2]
 
-    plt.figure(figsize=(8, 4.5))
+    plt.figure(figsize=(12, 4.2))
     plt.plot(
         dataframe[x_column],
         dataframe[y_column],

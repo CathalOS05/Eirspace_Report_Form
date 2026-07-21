@@ -1,75 +1,173 @@
 \documentclass[11pt,a4paper]{article}
 
-\usepackage[margin=1.8cm]{geometry}
+\usepackage[
+    top=1.6cm,
+    bottom=1.7cm,
+    left=1.6cm,
+    right=1.6cm,
+    columnsep=0.7cm
+]{geometry}
+
 \usepackage{graphicx}
 \usepackage{array}
 \usepackage{float}
 \usepackage{fancyhdr}
 \usepackage{parskip}
-\usepackage{tabularx}
+\usepackage{caption}
+\usepackage{multicol}
+\usepackage{titlesec}
 \usepackage[
     pdftitle={((( full_report_name | latex_escape )))},
     pdfauthor={((( report_author | latex_escape )))}
 ]{hyperref}
+
 \pagestyle{fancy}
 \fancyhf{}
-\lhead{((( report_code | latex_escape )))}
-\rhead{Project Completion}
+\lhead{\small ((( report_code | latex_escape )))}
+\rhead{\small Project Completion Report}
 \cfoot{\thepage}
 
 \setlength{\parindent}{0pt}
+\setlength{\parskip}{0.55em}
+\setlength{\columnsep}{0.7cm}
+\setlength{\emergencystretch}{2em}
+
+\sloppy
+
+\titlespacing*{\section}{0pt}{0.8em}{0.35em}
+\titleformat{\section}
+    {\large\bfseries}
+    {}
+    {0pt}
+    {}
+
+\captionsetup{
+    font=small,
+    skip=3pt
+}
 
 \begin{document}
 
-\begin{minipage}{0.72\textwidth}
-    {\LARGE\textbf{Project Completion Report}}\\[0.3em]
-    {\large ((( report_title | latex_escape )))}
+% ---------------- Full-width title ----------------
+
+\begin{minipage}[t]{0.84\textwidth}
+    {\LARGE\textbf{
+        ((( report_code | latex_escape )))
+        --
+        ((( report_title | latex_escape )))
+    }}\\[0.3em]
+
+    {\large Project Completion Report}
 \end{minipage}
-\begin{minipage}{0.26\textwidth}
+\hfill
+\begin{minipage}[t]{0.12\textwidth}
     \raggedleft
+
     ((* if logo_path *))
-    \includegraphics[width=0.9\linewidth]{((( logo_path )))}
+    \includegraphics[
+        width=1.2cm,
+        height=1.2cm,
+        keepaspectratio
+    ]{((( logo_path )))}
     ((* endif *))
 \end{minipage}
 
-\vspace{1em}
+\vspace{0.5em}
 \hrule
-\vspace{1em}
+\vspace{0.6em}
 
-\begin{tabularx}{\textwidth}{@{}>{\bfseries}p{4cm}X@{}}
-Report ID: & ((( report_code | latex_escape ))) \\
-Department: & ((( department | latex_escape ))) \\
-Report author: & ((( report_author | latex_escape ))) \\
-Person responsible: & ((( sections.responsible_person | latex_escape ))) \\
-Supporting members: & ((( sections.supporting_members | latex_escape ))) \\
-Date of report: & ((( report_date | latex_escape ))) \\
-Completion date: & ((( sections.completion_date | latex_escape ))) \\
-Project outcome: & ((( sections.outcome | latex_escape ))) \\
-\end{tabularx}
+% ---------------- Two-column report text ----------------
 
-\section*{Original Project Goal}
-((( sections.main_goal | latex_escape )))
+\begin{multicols}{2}
+
+\small
+\renewcommand{\arraystretch}{1.1}
+
+\begin{tabular}{
+    @{}
+    >{\bfseries}p{2.3cm}
+    p{\dimexpr\columnwidth-2.3cm\relax}
+    @{}
+}
+Report ID: &
+((( report_code | latex_escape ))) \\
+
+Department: &
+((( department | latex_escape ))) \\
+
+Author: &
+((( report_author | latex_escape ))) \\
+
+Responsible: &
+((( sections.responsible_person | latex_escape ))) \\
+
+Completion date: &
+((( sections.completion_date | latex_escape ))) \\
+\end{tabular}
+
+\normalsize
+\vspace{0.4em}
+
+\section*{Original Goal}
+((( sections.original_goal | latex_escape )))
 
 \section*{Work Completed}
-((( sections.description | latex_escape )))
+((( sections.work_completed | latex_escape )))
+
+\section*{Supporting Members}
+((( sections.supporting_members | latex_escape )))
+
+\section*{Outcome}
+((( sections.outcome | latex_escape )))
 
 \section*{Final Result}
-((( sections.result | latex_escape )))
+((( sections.final_result | latex_escape )))
 
-((* if sections.notes *))
-\section*{Remaining Actions or Notes}
+\section*{Notes}
 ((( sections.notes | latex_escape )))
+
+\end{multicols}
+
+% ---------------- Full-width graph ----------------
+
+((* if has_csv and chart_path *))
+\vfill
+
+\begin{center}
+    \includegraphics[
+        width=0.94\textwidth,
+        height=4.0cm,
+        keepaspectratio
+    ]{((( chart_path )))}
+
+    \vspace{0.15em}
+
+    {\small Figure 1: Final project data generated from the uploaded CSV file.}
+\end{center}
 ((* endif *))
 
+% ---------------- Images on following pages ----------------
+
 ((* if has_images *))
-\section*{Supporting Images}
+\clearpage
+
+\section*{Final Project Images}
+
+\begin{multicols}{2}
 
 ((* for image_path in image_paths *))
-\begin{figure}[H]
-    \centering
-    \includegraphics[width=0.85\textwidth,height=0.6\textheight,keepaspectratio]{((( image_path )))}
-\end{figure}
+\begin{center}
+    \includegraphics[
+        width=0.95\columnwidth,
+        height=4.8cm,
+        keepaspectratio
+    ]{((( image_path )))}
+\end{center}
+
+\vspace{0.3em}
 ((* endfor *))
+
+\end{multicols}
 ((* endif *))
 
 \end{document}
