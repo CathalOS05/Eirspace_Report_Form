@@ -7,8 +7,11 @@
 \usepackage{float}
 \usepackage{fancyhdr}
 \usepackage{parskip}
-\usepackage{hyperref}
 
+\usepackage[
+    pdftitle={((( full_report_name | latex_escape )))},
+    pdfauthor={((( report_author | latex_escape )))}
+]{hyperref}
 \pagestyle{fancy}
 \fancyhf{}
 \lhead{((( report_code | latex_escape )))}

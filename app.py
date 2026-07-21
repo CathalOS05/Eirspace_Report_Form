@@ -9,6 +9,7 @@ import matplotlib.pyplot as plt
 import pandas as pd
 import streamlit as st
 from jinja2 import Environment, FileSystemLoader
+import re
 
 
 # =========================================================
@@ -125,18 +126,94 @@ def safe_filename(value):
     return value.strip("._") or "report"
 
 
-def create_report_code(subteam, report_type, report_number):
+def create_report_prefix(subteam, report_type):
     """
-    Create a code such as RST_001.
+    Create the category prefix without the report number.
+
+    Examples:
+        RAT - Avionics testing report
+        RAS - Avionics simulation report
+        RSD - Structures design report
     """
     return (
         "R"
         + SUBTEAM_CODES[subteam]
         + REPORT_CODES[report_type]
-        + "_"
-        + report_number.strip()
     )
 
+
+def find_next_report_number(output_directory, report_prefix):
+    """
+    Find the lowest unused report number for the selected report category.
+
+    Both files and folders inside OUTPUT_DIR are checked recursively.
+
+    For example, if these reports exist:
+
+        RAT_001_VEGA_TEST.pdf
+        RAT_003_LOAD_TEST.pdf
+
+    the next report number will be 002.
+    """
+    used_numbers = set()
+
+    # Matches names such as:
+    # RAT_001
+    # RAT_001_VEGA_TEST.pdf
+    # RAT_001_VEGA_TEST_ab12cd34
+    pattern = re.compile(
+        rf"^{re.escape(report_prefix)}_(\d{{3}})(?:_|\.|$)",
+        re.IGNORECASE,
+    )
+
+    if not output_directory.exists():
+        return 1
+
+    for path in output_directory.rglob("*"):
+        match = pattern.match(path.name)
+
+        if match:
+            used_numbers.add(int(match.group(1)))
+
+    next_number = 1
+
+    while next_number in used_numbers:
+        next_number += 1
+
+    return next_number
+
+
+def create_report_code(subteam, report_type, report_number):
+    """
+    Create the complete report code.
+
+    Example:
+        RAT_001
+    """
+    report_prefix = create_report_prefix(
+        subteam,
+        report_type,
+    )
+
+    return f"{report_prefix}_{report_number:03d}"
+
+def safe_report_title(value):
+    """
+    Convert a report title into a consistent filename component.
+
+    Example:
+        "VEGA Test" -> "VEGA_TEST"
+    """
+    value = str(value).strip().upper()
+
+    # Replace anything other than letters, numbers, hyphens
+    # and underscores with an underscore.
+    value = re.sub(r"[^A-Z0-9_-]+", "_", value)
+
+    # Remove duplicate underscores.
+    value = re.sub(r"_+", "_", value)
+
+    return value.strip("_") or "UNTITLED"
 
 def save_uploaded_file(uploaded_file, destination_folder):
     """
@@ -522,10 +599,22 @@ subteam = st.selectbox(
     SUBTEAMS,
 )
 
-report_number = st.text_input(
-    "Report number",
-    placeholder="For example: 001",
+report_prefix = create_report_prefix(
+    subteam,
+    report_type,
 )
+
+report_number = find_next_report_number(
+    OUTPUT_DIR,
+    report_prefix,
+)
+
+report_code = create_report_code(
+    subteam,
+    report_type,
+    report_number,
+)
+
 
 report_date = st.date_input(
     "Date of report",
@@ -616,6 +705,16 @@ image_files = st.file_uploader(
 )
 
 
+report_prefix = create_report_prefix(
+    subteam,
+    report_type,
+)
+
+report_number = find_next_report_number(
+    OUTPUT_DIR,
+    report_prefix,
+)
+
 report_code = create_report_code(
     subteam,
     report_type,
@@ -636,8 +735,6 @@ if st.button(
 ):
     errors = []
 
-    if not report_number.strip():
-        errors.append("Enter a report number.")
 
     if not report_subject.strip():
         errors.append("Enter a report title.")
@@ -650,22 +747,35 @@ if st.button(
             st.error(error)
 
     else:
-        submission_id = uuid.uuid4().hex[:8]
-        safe_report_code = safe_filename(report_code)
-
-        submission_folder = (
-            OUTPUT_DIR
-            / f"{safe_report_code}_{submission_id}"
+        # Recalculate immediately before generating. This reduces the chance
+        # of using a number that has since been taken by another report.
+        report_prefix = create_report_prefix(
+            subteam,
+            report_type,
         )
 
-        documents_folder = (
-            submission_folder
-            / "submitted_documents"
+        report_number = find_next_report_number(
+            OUTPUT_DIR,
+            report_prefix,
         )
+
+        report_code = create_report_code(
+            subteam,
+            report_type,
+            report_number,
+        )
+
+        safe_title = safe_report_title(report_subject)
+
+        # Example: RAT_001_VEGA_TEST
+        full_report_name = f"{report_code}_{safe_title}"
+
+        submission_folder = OUTPUT_DIR / full_report_name
+        documents_folder = submission_folder / "submitted_documents"
 
         submission_folder.mkdir(
             parents=True,
-            exist_ok=True,
+            exist_ok=False,
         )
 
         documents_folder.mkdir(
@@ -765,13 +875,12 @@ if st.button(
 
                 context = {
                     "report_code": report_code,
+                    "full_report_name": full_report_name,
                     "report_type": report_type,
                     "report_title": report_subject,
                     "report_subject": report_subject,
-                    "report_number": report_number,
-                    "report_date": report_date.strftime(
-                        "%d %B %Y"
-                    ),
+                    "report_number": f"{report_number:03d}",
+                    "report_date": report_date.strftime("%d %B %Y"),
                     "subteam": subteam,
                     "department": subteam,
                     "report_author": report_author,
@@ -785,16 +894,13 @@ if st.button(
                     ),
                     "table_rows": table_rows,
                     "table_columns": table_columns,
-                    "has_images": len(
-                        working_image_paths
-                    ) > 0,
+                    "has_images": len(working_image_paths) > 0,
                     "image_paths": [
                         path.as_posix()
                         for path in working_image_paths
                     ],
                     "logo_path": logo_path,
                 }
-
                 render_latex(
                     context,
                     tex_path,
@@ -805,7 +911,7 @@ if st.button(
 
                 final_pdf_path = (
                     submission_folder
-                    / f"{safe_report_code}.pdf"
+                    / f"{full_report_name}.pdf"
                 )
 
                 final_pdf_path.write_bytes(
@@ -815,7 +921,7 @@ if st.button(
                 # Save rendered LaTeX for future editing.
                 final_tex_path = (
                     submission_folder
-                    / f"{safe_report_code}.tex"
+                    / f"{full_report_name}.tex"
                 )
 
                 final_tex_path.write_bytes(
