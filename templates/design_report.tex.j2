@@ -1,0 +1,98 @@
+\documentclass[11pt,a4paper]{article}
+
+\usepackage[margin=1.8cm]{geometry}
+\usepackage{graphicx}
+\usepackage{booktabs}
+\usepackage{array}
+\usepackage{float}
+\usepackage{fancyhdr}
+\usepackage{parskip}
+\usepackage{hyperref}
+
+\pagestyle{fancy}
+\fancyhf{}
+\lhead{((( report_code | latex_escape )))}
+\rhead{Design Report}
+\cfoot{\thepage}
+
+\setlength{\parindent}{0pt}
+
+\begin{document}
+
+\begin{minipage}{0.72\textwidth}
+    {\LARGE\textbf{Design Report}}\\[0.3em]
+    {\large ((( report_title | latex_escape )))}
+\end{minipage}
+\begin{minipage}{0.26\textwidth}
+    \raggedleft
+    ((* if logo_path *))
+    \includegraphics[width=0.9\linewidth]{((( logo_path )))}
+    ((* endif *))
+\end{minipage}
+
+\vspace{1em}
+\hrule
+\vspace{1em}
+
+\begin{tabular}{@{}ll@{}}
+\textbf{Report ID:} & ((( report_code | latex_escape ))) \\
+\textbf{Department:} & ((( department | latex_escape ))) \\
+\textbf{Author:} & ((( report_author | latex_escape ))) \\
+\textbf{Participants:} & ((( participants | latex_escape ))) \\
+\textbf{Date:} & ((( report_date | latex_escape ))) \\
+\end{tabular}
+
+\section*{Design Goal}
+((( sections.goal | latex_escape )))
+
+\section*{Key Requirements}
+((( sections.requirements | latex_escape )))
+
+\section*{Selected Design}
+((( sections.design | latex_escape )))
+
+\section*{Verification and Next Action}
+((( sections.verification | latex_escape )))
+
+((* if has_csv *))
+\section*{Supporting Data}
+
+\begin{figure}[H]
+    \centering
+    \includegraphics[width=0.9\textwidth]{((( chart_path )))}
+    \caption{Chart generated from the uploaded CSV file.}
+\end{figure}
+
+((* if table_rows *))
+\begin{table}[H]
+\centering
+\small
+\begin{tabular}{((* for column in table_columns *))l((* endfor *))}
+\toprule
+((* for column in table_columns *))
+\textbf{((( column | latex_escape )))}((* if not loop.last *)) & ((* endif *))
+((* endfor *)) \\
+\midrule
+((* for row in table_rows *))
+((* for column in table_columns *))
+((( row[column] | latex_escape )))((* if not loop.last *)) & ((* endif *))
+((* endfor *)) \\
+((* endfor *))
+\bottomrule
+\end{tabular}
+\end{table}
+((* endif *))
+((* endif *))
+
+((* if has_images *))
+\section*{Drawings and Images}
+
+((* for image_path in image_paths *))
+\begin{figure}[H]
+    \centering
+    \includegraphics[width=0.9\textwidth,height=0.7\textheight,keepaspectratio]{((( image_path )))}
+\end{figure}
+((* endfor *))
+((* endif *))
+
+\end{document}

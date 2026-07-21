@@ -1,0 +1,72 @@
+\documentclass[11pt,a4paper]{article}
+
+\usepackage[margin=1.8cm]{geometry}
+\usepackage{graphicx}
+\usepackage{array}
+\usepackage{float}
+\usepackage{fancyhdr}
+\usepackage{parskip}
+\usepackage{tabularx}
+
+\pagestyle{fancy}
+\fancyhf{}
+\lhead{((( report_code | latex_escape )))}
+\rhead{Project Completion}
+\cfoot{\thepage}
+
+\setlength{\parindent}{0pt}
+
+\begin{document}
+
+\begin{minipage}{0.72\textwidth}
+    {\LARGE\textbf{Project Completion Report}}\\[0.3em]
+    {\large ((( report_title | latex_escape )))}
+\end{minipage}
+\begin{minipage}{0.26\textwidth}
+    \raggedleft
+    ((* if logo_path *))
+    \includegraphics[width=0.9\linewidth]{((( logo_path )))}
+    ((* endif *))
+\end{minipage}
+
+\vspace{1em}
+\hrule
+\vspace{1em}
+
+\begin{tabularx}{\textwidth}{@{}>{\bfseries}p{4cm}X@{}}
+Report ID: & ((( report_code | latex_escape ))) \\
+Department: & ((( department | latex_escape ))) \\
+Report author: & ((( report_author | latex_escape ))) \\
+Person responsible: & ((( sections.responsible_person | latex_escape ))) \\
+Supporting members: & ((( sections.supporting_members | latex_escape ))) \\
+Date of report: & ((( report_date | latex_escape ))) \\
+Completion date: & ((( sections.completion_date | latex_escape ))) \\
+Project outcome: & ((( sections.outcome | latex_escape ))) \\
+\end{tabularx}
+
+\section*{Original Project Goal}
+((( sections.main_goal | latex_escape )))
+
+\section*{Work Completed}
+((( sections.description | latex_escape )))
+
+\section*{Final Result}
+((( sections.result | latex_escape )))
+
+((* if sections.notes *))
+\section*{Remaining Actions or Notes}
+((( sections.notes | latex_escape )))
+((* endif *))
+
+((* if has_images *))
+\section*{Supporting Images}
+
+((* for image_path in image_paths *))
+\begin{figure}[H]
+    \centering
+    \includegraphics[width=0.85\textwidth,height=0.6\textheight,keepaspectratio]{((( image_path )))}
+\end{figure}
+((* endfor *))
+((* endif *))
+
+\end{document}
