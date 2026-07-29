@@ -14,11 +14,13 @@ from jinja2 import Environment, FileSystemLoader
 
 GOOGLE_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbykzQeqc9-hZb1xl7k00tp59LG3DYg5jT_JrHzWIS8vrPtLS6LIYBb_YqWP8rr5VwMuFw/exec"
 
-UPLOAD_TOKEN = "poponunyhbujkmA"
+UPLOAD_TOKEN = "YOUR_SECRET_TOKEN"
 
 def upload_pdf_to_drive(
     pdf_path: str | Path,
     department: str,
+    report_type: str,
+    report_title: str,
     script_url: str = GOOGLE_SCRIPT_URL,
     upload_token: str = UPLOAD_TOKEN,
 ) -> dict:
@@ -37,14 +39,14 @@ def upload_pdf_to_drive(
         script_url,
         data={
             "token": upload_token,
-            "filename": pdf_path.name,
             "department": department,
+            "report_type": report_type,
+            "report_title": report_title,
             "file": encoded_pdf,
         },
         timeout=120,
     )
 
-    # Show the actual Apps Script response if something goes wrong.
     if not response.ok:
         raise RuntimeError(
             f"Upload returned HTTP {response.status_code}:\n"
@@ -1148,8 +1150,9 @@ if st.button(
                     drive_result = upload_pdf_to_drive(
                         pdf_path=final_pdf_path,
                         department=subteam,
+                        report_type=report_type,
+                        report_title=report_subject,
                     )
-
                     st.success(
                         f"{drive_result['fileName']} was uploaded to the "
                         f"{drive_result['department']} folder."
