@@ -8,6 +8,12 @@
     columnsep=0.7cm
 ]{geometry}
 
+\usepackage[T1]{fontenc}
+\usepackage[utf8]{inputenc}
+\usepackage{eurosym}
+\DeclareUnicodeCharacter{20AC}{\euro}
+\DeclareUnicodeCharacter{00B2}{\textsuperscript{2}}
+
 \usepackage{graphicx}
 \usepackage{array}
 \usepackage{float}
@@ -16,9 +22,12 @@
 \usepackage{caption}
 \usepackage{multicol}
 \usepackage{titlesec}
+\usepackage{tabularx}
+\usepackage{booktabs}
+\usepackage{enumitem}
 \usepackage[
     pdftitle={((( full_report_name | latex_escape )))},
-    pdfauthor={((( report_author | latex_escape )))}
+    pdfauthor={((( report_author | latex_escape ))) }
 ]{hyperref}
 
 \pagestyle{fancy}
@@ -28,13 +37,13 @@
 \cfoot{\thepage}
 
 \setlength{\parindent}{0pt}
-\setlength{\parskip}{0.55em}
+\setlength{\parskip}{0.45em}
 \setlength{\columnsep}{0.7cm}
 \setlength{\emergencystretch}{2em}
 
 \sloppy
 
-\titlespacing*{\section}{0pt}{0.8em}{0.35em}
+\titlespacing*{\section}{0pt}{0.75em}{0.3em}
 \titleformat{\section}
     {\large\bfseries}
     {}
@@ -44,6 +53,12 @@
 \captionsetup{
     font=small,
     skip=3pt
+}
+
+\newcommand{\outlineheading}[1]{%
+    \vspace{0.15em}%
+    {\large\bfseries #1}\par
+    \vspace{0.15em}%
 }
 
 \begin{document}
@@ -76,40 +91,27 @@
 \hrule
 \vspace{0.6em}
 
-% ---------------- Two-column report text ----------------
-
-\begin{multicols}{2}
+% ---------------- Project metadata ----------------
 
 \small
-\renewcommand{\arraystretch}{1.1}
-
-\begin{tabular}{
-    @{}
-    >{\bfseries}p{2.3cm}
-    p{\dimexpr\columnwidth-2.3cm\relax}
-    @{}
-}
-Report ID: &
-((( report_code | latex_escape ))) \\
-
-Department: &
-((( department | latex_escape ))) \\
-
-Author: &
-((( report_author | latex_escape ))) \\
-
-Responsible: &
-((( sections.responsible_person | latex_escape ))) \\
-
-Target date: &
-((( sections.target_completion_date | latex_escape ))) \\
-
-Status: &
-((( sections.status | latex_escape ))) \\
-\end{tabular}
-
+\renewcommand{\arraystretch}{1.08}
+\begin{tabularx}{\textwidth}{@{}>{\bfseries}p{2.1cm}X>{\bfseries}p{2.1cm}X@{}}
+Report ID: & ((( report_code | latex_escape ))) &
+Department: & ((( department | latex_escape ))) \\
+Author: & ((( report_author | latex_escape ))) &
+Responsible: & ((( sections.responsible_person | latex_escape ))) \\
+Report date: & ((( report_date | latex_escape ))) &
+Target date: & ((( sections.target_date | latex_escape ))) \\
+Status: & ((( sections.status | latex_escape ))) &
+Supporting members: & ((( sections.supporting_members | latex_escape ))) \\
+\end{tabularx}
 \normalsize
+
 \vspace{0.4em}
+
+% ---------------- Overview ----------------
+
+\begin{multicols}{2}
 
 \section*{Main Goal}
 ((( sections.main_goal | latex_escape )))
@@ -117,13 +119,91 @@ Status: &
 \section*{Project Description}
 ((( sections.description | latex_escape )))
 
-\section*{Supporting Members}
-((( sections.supporting_members | latex_escape )))
+((* if sections.deliverables *))
+\section*{Deliverables}
+\begin{enumerate}[leftmargin=1.6em,itemsep=0.15em,topsep=0.1em]
+((* for deliverable in sections.deliverables *))
+    \item ((( deliverable | latex_escape )))
+((* endfor *))
+\end{enumerate}
+((* endif *))
 
-\section*{Notes}
-((( sections.notes | latex_escape )))
+((* if sections.testing_items *))
+\section*{Testing and Verification}
+((* for item in sections.testing_items *))
+\textbf{((( item["Test or review"] | latex_escape )))}
+
+((( item["Purpose / acceptance criterion"] | latex_escape )))
+
+((* endfor *))
+((* endif *))
+
+((* if sections.timeline_items *))
+\section*{Timeline}
+\small
+\renewcommand{\arraystretch}{1.08}
+\begin{tabularx}{\columnwidth}{@{}>{\raggedright\arraybackslash}p{1.9cm}X@{}}
+\toprule
+\textbf{Period} & \textbf{Planned work} \\
+\midrule
+((* for item in sections.timeline_items *))
+((( item["Period"] | latex_escape ))) &
+((( item["Planned work"] | latex_escape ))) \\
+((* endfor *))
+\bottomrule
+\end{tabularx}
+\normalsize
+((* endif *))
+
+((* if sections.technology_items *))
+\section*{Technology}
+((* for item in sections.technology_items *))
+\textbf{((( item["Technology / method"] | latex_escape )))}
+
+((( item["Application"] | latex_escape )))
+
+((* endfor *))
+((* endif *))
 
 \end{multicols}
+
+% ---------------- Full-width cost table ----------------
+
+((* if sections.cost_items or sections.total_cost or sections.cost_notes *))
+\section*{Cost}
+
+((* if sections.cost_notes *))
+((( sections.cost_notes | latex_escape )))
+((* endif *))
+
+((* if sections.cost_items *))
+\small
+\renewcommand{\arraystretch}{1.1}
+\begin{tabularx}{\textwidth}{@{}X>{\centering\arraybackslash}p{3.2cm}>{\raggedleft\arraybackslash}p{3.0cm}@{}}
+\toprule
+\textbf{Factor} & \textbf{Status} & \textbf{Value} \\
+\midrule
+((* for item in sections.cost_items *))
+((( item["Factor"] | latex_escape ))) &
+((( item["Status"] | latex_escape ))) &
+((( item["Value"] | latex_escape ))) \\
+((* endfor *))
+((* if sections.total_cost *))
+\midrule
+\textbf{Total estimated cost} & & \textbf{((( sections.total_cost | latex_escape )))} \\
+((* endif *))
+\bottomrule
+\end{tabularx}
+\normalsize
+((* elif sections.total_cost *))
+\textbf{Total estimated cost:} ((( sections.total_cost | latex_escape )))
+((* endif *))
+((* endif *))
+
+((* if sections.notes *))
+\section*{Notes}
+((( sections.notes | latex_escape )))
+((* endif *))
 
 % ---------------- Full-width graph ----------------
 

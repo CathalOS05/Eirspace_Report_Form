@@ -1,16 +1,73 @@
+import base64
+import re
 import shutil
 import subprocess
 import tempfile
-import uuid
 from datetime import date
 from pathlib import Path
 
 import matplotlib.pyplot as plt
 import pandas as pd
+import requests
 import streamlit as st
 from jinja2 import Environment, FileSystemLoader
-import re
 
+GOOGLE_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbykzQeqc9-hZb1xl7k00tp59LG3DYg5jT_JrHzWIS8vrPtLS6LIYBb_YqWP8rr5VwMuFw/exec"
+
+UPLOAD_TOKEN = "poponunyhbujkmA"
+
+def upload_pdf_to_drive(
+    pdf_path: str | Path,
+    department: str,
+    script_url: str = GOOGLE_SCRIPT_URL,
+    upload_token: str = UPLOAD_TOKEN,
+) -> dict:
+    pdf_path = Path(pdf_path)
+
+    if not pdf_path.is_file():
+        raise FileNotFoundError(
+            f"PDF does not exist: {pdf_path}"
+        )
+
+    encoded_pdf = base64.b64encode(
+        pdf_path.read_bytes()
+    ).decode("utf-8")
+
+    response = requests.post(
+        script_url,
+        data={
+            "token": upload_token,
+            "filename": pdf_path.name,
+            "department": department,
+            "file": encoded_pdf,
+        },
+        timeout=120,
+    )
+
+    # Show the actual Apps Script response if something goes wrong.
+    if not response.ok:
+        raise RuntimeError(
+            f"Upload returned HTTP {response.status_code}:\n"
+            f"{response.text}"
+        )
+
+    try:
+        result = response.json()
+    except ValueError as error:
+        raise RuntimeError(
+            "Apps Script did not return valid JSON.\n\n"
+            f"Response received:\n{response.text}"
+        ) from error
+
+    if not result.get("success"):
+        raise RuntimeError(
+            result.get(
+                "error",
+                "Unknown Google Drive upload error.",
+            )
+        )
+
+    return result
 
 # =========================================================
 # Folder paths
@@ -33,7 +90,6 @@ STATIC_DIR.mkdir(parents=True, exist_ok=True)
 SUBTEAMS = [
     "Avionics",
     "Structures",
-    "Propulsion",
     "Recovery",
     "General",
 ]
@@ -41,7 +97,6 @@ SUBTEAMS = [
 SUBTEAM_CODES = {
     "Avionics": "A",
     "Structures": "S",
-    "Propulsion": "P",
     "Recovery": "R",
     "General": "G",
 }
@@ -469,16 +524,23 @@ def design_report_form():
 
 
 def project_outline_report_form():
+    """
+    Collect the information required for a project outline report.
+
+    This form is intentionally more detailed than the other short report
+    forms because the outline acts as the planning and approval document for
+    a project. Changes here affect only the Project Outline Report.
+    """
     sections = {}
 
     sections["main_goal"] = short_text_area(
         "Main goal",
-        "State the main outcome of the project.",
+        "State the principal outcome the project must achieve.",
     )
 
     sections["description"] = short_text_area(
-        "Short description",
-        "Briefly describe the work to be completed.",
+        "Project description",
+        "Briefly describe the project scope, background and intended result.",
         height=130,
     )
 
@@ -509,9 +571,138 @@ def project_outline_report_form():
         key="outline_status",
     )
 
+    st.markdown("#### Deliverables")
+    sections["deliverables"] = short_text_area(
+        "Planned deliverables",
+        "Enter one deliverable per line.",
+        height=130,
+        placeholder=(
+            "Completed prototype\n"
+            "Validated final design\n"
+            "Manufacturing and test documentation"
+        ),
+    )
+
+    st.markdown("#### Testing and verification")
+    sections["testing_items"] = st.data_editor(
+        pd.DataFrame(
+            [
+                {"Test or review": "", "Purpose / acceptance criterion": ""},
+                {"Test or review": "", "Purpose / acceptance criterion": ""},
+                {"Test or review": "", "Purpose / acceptance criterion": ""},
+            ]
+        ),
+        num_rows="dynamic",
+        hide_index=True,
+        use_container_width=True,
+        key="outline_testing_items",
+        column_config={
+            "Test or review": st.column_config.TextColumn(
+                "Test or review",
+                help="For example: bench test, simulation review or flight test.",
+            ),
+            "Purpose / acceptance criterion": st.column_config.TextColumn(
+                "Purpose / acceptance criterion",
+                help="State what will be checked and how success will be judged.",
+            ),
+        },
+    )
+
+    st.markdown("#### Timeline")
+    sections["timeline_items"] = st.data_editor(
+        pd.DataFrame(
+            [
+                {"Period": "", "Planned work": ""},
+                {"Period": "", "Planned work": ""},
+                {"Period": "", "Planned work": ""},
+                {"Period": "", "Planned work": ""},
+            ]
+        ),
+        num_rows="dynamic",
+        hide_index=True,
+        use_container_width=True,
+        key="outline_timeline_items",
+        column_config={
+            "Period": st.column_config.TextColumn(
+                "Period",
+                help="Month, week, phase or milestone date.",
+            ),
+            "Planned work": st.column_config.TextColumn(
+                "Planned work",
+                help="Main activity or milestone for this period.",
+            ),
+        },
+    )
+
+    st.markdown("#### Technology")
+    sections["technology_items"] = st.data_editor(
+        pd.DataFrame(
+            [
+                {"Technology / method": "", "Application": ""},
+                {"Technology / method": "", "Application": ""},
+                {"Technology / method": "", "Application": ""},
+            ]
+        ),
+        num_rows="dynamic",
+        hide_index=True,
+        use_container_width=True,
+        key="outline_technology_items",
+        column_config={
+            "Technology / method": st.column_config.TextColumn(
+                "Technology / method",
+                help="Key design approach, material, process, software or mechanism.",
+            ),
+            "Application": st.column_config.TextColumn(
+                "Application",
+                help="Explain how it will be used in the project.",
+            ),
+        },
+    )
+
+    st.markdown("#### Cost")
+    sections["cost_notes"] = short_text_area(
+        "Cost assumptions or funding notes",
+        "For example: sponsorship sought, stock material available, or labour excluded.",
+        height=80,
+    )
+
+    sections["cost_items"] = st.data_editor(
+        pd.DataFrame(
+            [
+                {"Factor": "", "Status": "Estimated", "Value": ""},
+                {"Factor": "", "Status": "Estimated", "Value": ""},
+                {"Factor": "", "Status": "Estimated", "Value": ""},
+            ]
+        ),
+        num_rows="dynamic",
+        hide_index=True,
+        use_container_width=True,
+        key="outline_cost_items",
+        column_config={
+            "Factor": st.column_config.TextColumn(
+                "Factor",
+                help="Item, quantity, service or other cost driver.",
+            ),
+            "Status": st.column_config.SelectboxColumn(
+                "Status",
+                options=["Known", "Estimated", "Sponsored", "Available"],
+                required=False,
+            ),
+            "Value": st.column_config.TextColumn(
+                "Value",
+                help="Enter the value with units or currency, for example €25 or 4 m².",
+            ),
+        },
+    )
+
+    sections["total_cost"] = st.text_input(
+        "Estimated total cost",
+        placeholder="For example: €150",
+    )
+
     sections["notes"] = short_text_area(
         "Additional notes",
-        "Optional short notes, dependencies or relevant information.",
+        "Optional dependencies, risks, constraints or relevant information.",
         height=90,
     )
 
@@ -870,6 +1061,29 @@ if st.button(
                         formatted_sections[key] = value.strftime(
                             "%d %B %Y"
                         )
+                    elif isinstance(value, pd.DataFrame):
+                        # Remove completely blank rows before passing table data
+                        # to Jinja. This is used by the Project Outline Report;
+                        # the other report types continue to pass plain strings.
+                        cleaned_dataframe = value.fillna("")
+                        cleaned_dataframe = cleaned_dataframe[
+                            cleaned_dataframe.apply(
+                                lambda row: any(
+                                    str(cell).strip()
+                                    for cell in row
+                                ),
+                                axis=1,
+                            )
+                        ]
+                        formatted_sections[key] = cleaned_dataframe.to_dict(
+                            orient="records"
+                        )
+                    elif key == "deliverables":
+                        formatted_sections[key] = [
+                            line.strip()
+                            for line in str(value).splitlines()
+                            if line.strip()
+                        ]
                     else:
                         formatted_sections[key] = value
 
@@ -928,9 +1142,32 @@ if st.button(
                     tex_path.read_bytes()
                 )
 
-                st.success(
-                    "PDF generated successfully."
-                )
+                st.success("PDF generated successfully.")
+
+                try:
+                    drive_result = upload_pdf_to_drive(
+                        pdf_path=final_pdf_path,
+                        department=subteam,
+                    )
+
+                    st.success(
+                        f"{drive_result['fileName']} was uploaded to the "
+                        f"{drive_result['department']} folder."
+                    )
+
+                    if drive_result.get("fileUrl"):
+                        st.link_button(
+                            "Open PDF in Google Drive",
+                            drive_result["fileUrl"],
+                            use_container_width=True,
+                        )
+
+                except Exception as upload_error:
+                    st.warning(
+                        "The PDF was generated, but the Google Drive upload failed."
+                    )
+
+                    st.code(str(upload_error))
 
                 st.download_button(
                     "Download PDF",
