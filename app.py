@@ -12,18 +12,78 @@ import requests
 import streamlit as st
 from jinja2 import Environment, FileSystemLoader
 
-GOOGLE_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbykzQeqc9-hZb1xl7k00tp59LG3DYg5jT_JrHzWIS8vrPtLS6LIYBb_YqWP8rr5VwMuFw/exec"
+GOOGLE_SCRIPT_URL = st.secrets["GOOGLE_SCRIPT_URL"]
+UPLOAD_TOKEN = st.secrets["UPLOAD_TOKEN"]
 
-UPLOAD_TOKEN = "YOUR_SECRET_TOKEN"
+def post_to_drive_script(
+    data: dict,
+    timeout: int = 120,
+) -> dict:
+    """
+    Send a request to the Google Apps Script web app.
+    """
+    response = requests.post(
+        GOOGLE_SCRIPT_URL,
+        data={
+            "token": UPLOAD_TOKEN,
+            **data,
+        },
+        timeout=timeout,
+    )
 
-def upload_pdf_to_drive(
+    if not response.ok:
+        raise RuntimeError(
+            f"Google Drive request returned HTTP "
+            f"{response.status_code}:\n"
+            f"{response.text}"
+        )
+
+    try:
+        result = response.json()
+    except ValueError as error:
+        raise RuntimeError(
+            "Google Apps Script did not return valid JSON.\n\n"
+            f"Response received:\n{response.text}"
+        ) from error
+
+    if not result.get("success"):
+        raise RuntimeError(
+            result.get(
+                "error",
+                "Unknown Google Drive error.",
+            )
+        )
+
+    return result
+
+def reserve_drive_report_number(
+    department: str,
+    report_type: str,
+    report_title: str,
+) -> dict:
+    """
+    Reserve the next report number in the correct Drive folder.
+    """
+    return post_to_drive_script(
+        {
+            "action": "reserve_number",
+            "department": department,
+            "report_type": report_type,
+            "report_title": report_title,
+        }
+    )
+
+def upload_reserved_pdf_to_drive(
     pdf_path: str | Path,
     department: str,
     report_type: str,
     report_title: str,
-    script_url: str = GOOGLE_SCRIPT_URL,
-    upload_token: str = UPLOAD_TOKEN,
+    report_code: str,
+    reservation_id: str,
 ) -> dict:
+    """
+    Upload a PDF using a previously reserved report number.
+    """
     pdf_path = Path(pdf_path)
 
     if not pdf_path.is_file():
@@ -35,41 +95,30 @@ def upload_pdf_to_drive(
         pdf_path.read_bytes()
     ).decode("utf-8")
 
-    response = requests.post(
-        script_url,
-        data={
-            "token": upload_token,
+    return post_to_drive_script(
+        {
+            "action": "upload_pdf",
             "department": department,
             "report_type": report_type,
             "report_title": report_title,
+            "report_code": report_code,
+            "reservation_id": reservation_id,
             "file": encoded_pdf,
-        },
-        timeout=120,
+        }
     )
 
-    if not response.ok:
-        raise RuntimeError(
-            f"Upload returned HTTP {response.status_code}:\n"
-            f"{response.text}"
-        )
-
-    try:
-        result = response.json()
-    except ValueError as error:
-        raise RuntimeError(
-            "Apps Script did not return valid JSON.\n\n"
-            f"Response received:\n{response.text}"
-        ) from error
-
-    if not result.get("success"):
-        raise RuntimeError(
-            result.get(
-                "error",
-                "Unknown Google Drive upload error.",
-            )
-        )
-
-    return result
+def cancel_drive_reservation(
+    reservation_id: str,
+) -> None:
+    """
+    Remove an unused reservation if PDF generation fails.
+    """
+    post_to_drive_script(
+        {
+            "action": "cancel_reservation",
+            "reservation_id": reservation_id,
+        }
+    )
 
 # =========================================================
 # Folder paths
@@ -898,23 +947,35 @@ image_files = st.file_uploader(
 )
 
 
-report_prefix = create_report_prefix(
-    subteam,
-    report_type,
-)
+reservation = None
 
-report_number = find_next_report_number(
-    OUTPUT_DIR,
-    report_prefix,
-)
+try:
+    reservation = reserve_drive_report_number(
+        department=subteam,
+        report_type=report_type,
+        report_title=report_subject,
+    )
 
-report_code = create_report_code(
-    subteam,
-    report_type,
-    report_number,
-)
+    report_code = reservation["reportCode"]
+    report_number = int(
+        reservation["reportNumber"]
+    )
+    reservation_id = reservation[
+        "reservationId"
+    ]
 
-st.info(f"Report ID: {report_code}")
+except Exception as error:
+    st.error(
+        "A report number could not be reserved "
+        "from Google Drive."
+    )
+    st.code(str(error))
+    st.stop()
+
+st.info(
+    "The report ID will be assigned from Google Drive "
+    "when the PDF is generated."
+)
 
 
 # =========================================================
@@ -927,7 +988,7 @@ if st.button(
     use_container_width=True,
 ):
     errors = []
-
+    reservation_id = None
 
     if not report_subject.strip():
         errors.append("Enter a report title.")
@@ -1147,29 +1208,31 @@ if st.button(
                 st.success("PDF generated successfully.")
 
                 try:
-                    drive_result = upload_pdf_to_drive(
+                    drive_result = upload_reserved_pdf_to_drive(
                         pdf_path=final_pdf_path,
                         department=subteam,
                         report_type=report_type,
                         report_title=report_subject,
-                    )
-                    st.success(
-                        f"{drive_result['fileName']} was uploaded to the "
-                        f"{drive_result['department']} folder."
+                        report_code=report_code,
+                        reservation_id=reservation_id,
                     )
 
-                    if drive_result.get("fileUrl"):
-                        st.link_button(
-                            "Open PDF in Google Drive",
-                            drive_result["fileUrl"],
-                            use_container_width=True,
-                        )
+                    st.success(
+                        f"{drive_result['fileName']} was uploaded "
+                        "to Google Drive."
+                    )
+
+                    st.link_button(
+                        "Open PDF in Google Drive",
+                        drive_result["fileUrl"],
+                        use_container_width=True,
+                    )
 
                 except Exception as upload_error:
                     st.warning(
-                        "The PDF was generated, but the Google Drive upload failed."
+                        "The PDF was generated locally, but the "
+                        "Google Drive upload failed."
                     )
-
                     st.code(str(upload_error))
 
                 st.download_button(
@@ -1198,6 +1261,14 @@ if st.button(
             st.code(str(error))
 
         except Exception as error:
+            if reservation_id:
+                try:
+                    cancel_drive_reservation(
+                        reservation_id
+                    )
+                except Exception:
+                    pass
+
             st.error(
                 "The report could not be generated."
             )
