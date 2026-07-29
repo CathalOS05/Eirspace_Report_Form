@@ -942,33 +942,7 @@ image_files = st.file_uploader(
 )
 
 
-reservation = None
 
-try:
-    reservation = reserve_drive_report_number(
-        department=subteam,
-        report_type=report_type,
-        report_title=report_subject,
-    )
-
-    report_code = reservation["reportCode"]
-    report_number = int(
-        reservation["reportNumber"]
-    )
-    reservation_id = reservation[
-        "reservationId"
-    ]
-
-except Exception as error:
-    st.error(
-        "A report number could not be reserved "
-        "from Google Drive."
-    )
-    st.code(str(error))
-    st.stop()
-
-st.write("Reservation response:", reservation)
-st.write("Reservation ID:", reservation_id)
 
 st.info(
     "The report ID will be assigned from Google Drive "
@@ -1001,21 +975,26 @@ if st.button(
     else:
         # Recalculate immediately before generating. This reduces the chance
         # of using a number that has since been taken by another report.
-        report_prefix = create_report_prefix(
-            subteam,
-            report_type,
-        )
+        try:
+            reservation = reserve_drive_report_number(
+                department=subteam,
+                report_type=report_type,
+                report_title=report_subject,
+            )
 
-        report_number = find_next_report_number(
-            OUTPUT_DIR,
-            report_prefix,
-        )
+            report_code = reservation["reportCode"]
+            report_number = int(
+                reservation["reportNumber"]
+            )
+            reservation_id = reservation["reservationId"]
 
-        report_code = create_report_code(
-            subteam,
-            report_type,
-            report_number,
-        )
+        except Exception as error:
+            st.error(
+                "A report number could not be reserved "
+                "from Google Drive."
+            )
+            st.code(str(error))
+            st.stop()
 
         safe_title = safe_report_title(report_subject)
 
