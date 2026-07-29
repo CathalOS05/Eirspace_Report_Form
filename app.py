@@ -75,20 +75,18 @@ def reserve_drive_report_number(
 
 def upload_reserved_pdf_to_drive(
     pdf_path: str | Path,
-    department: str,
-    report_type: str,
-    report_title: str,
-    report_code: str,
     reservation_id: str,
 ) -> dict:
-    """
-    Upload a PDF using a previously reserved report number.
-    """
     pdf_path = Path(pdf_path)
 
     if not pdf_path.is_file():
         raise FileNotFoundError(
             f"PDF does not exist: {pdf_path}"
+        )
+
+    if not reservation_id:
+        raise ValueError(
+            "Python did not receive a reservation ID."
         )
 
     encoded_pdf = base64.b64encode(
@@ -98,13 +96,10 @@ def upload_reserved_pdf_to_drive(
     return post_to_drive_script(
         {
             "action": "upload_pdf",
-            "department": department,
-            "report_type": report_type,
-            "report_title": report_title,
-            "report_code": report_code,
             "reservation_id": reservation_id,
             "file": encoded_pdf,
-        }
+        },
+        timeout=180,
     )
 
 def cancel_drive_reservation(
@@ -972,6 +967,9 @@ except Exception as error:
     st.code(str(error))
     st.stop()
 
+st.write("Reservation response:", reservation)
+st.write("Reservation ID:", reservation_id)
+
 st.info(
     "The report ID will be assigned from Google Drive "
     "when the PDF is generated."
@@ -1210,10 +1208,6 @@ if st.button(
                 try:
                     drive_result = upload_reserved_pdf_to_drive(
                         pdf_path=final_pdf_path,
-                        department=subteam,
-                        report_type=report_type,
-                        report_title=report_subject,
-                        report_code=report_code,
                         reservation_id=reservation_id,
                     )
 
