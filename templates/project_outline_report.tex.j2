@@ -231,7 +231,7 @@ Supporting members: & ((( sections.supporting_members | latex_escape ))) \\
 ((* endif *))
 
 
-% ---------------- Full-width cost table ----------------
+% ---------------- Single-column cost table ----------------
 
 ((* if sections.cost_items or sections.total_cost or sections.cost_notes *))
 \section*{Cost}
@@ -242,34 +242,49 @@ Supporting members: & ((( sections.supporting_members | latex_escape ))) \\
 
 ((* if sections.cost_items *))
 \small
-\renewcommand{\arraystretch}{1.1}
-\begin{tabularx}{\textwidth}{@{}X>{\centering\arraybackslash}p{3.2cm}>{\raggedleft\arraybackslash}p{3.0cm}@{}}
-\toprule
-\textbf{Factor} & \textbf{Status} & \textbf{Value} \\
-\midrule
+\renewcommand{\arraystretch}{1.15}
+
+\begin{tabularx}{\columnwidth}{
+    ||>{\raggedright\arraybackslash}X
+    |>{\centering\arraybackslash}p{0.25\columnwidth}
+    |>{\raggedleft\arraybackslash}p{0.22\columnwidth}||
+}
+\hline\hline
+\textbf{Factor} &
+\textbf{Status} &
+\textbf{Value} \\
+\hline\hline
+
 ((* for item in sections.cost_items *))
 ((( item["Factor"] | latex_escape ))) &
 ((( item["Status"] | latex_escape ))) &
 ((( item["Value"] | latex_escape ))) \\
+\hline
 ((* endfor *))
+
 ((* if sections.total_cost *))
-\midrule
-\textbf{Total estimated cost} & & \textbf{((( sections.total_cost | latex_escape )))} \\
+\textbf{Total estimated cost} &
+&
+\textbf{((( sections.total_cost | latex_escape )))} \\
+\hline
 ((* endif *))
-\bottomrule
+
+\hline
 \end{tabularx}
+
 \normalsize
+
 ((* elif sections.total_cost *))
-\textbf{Total estimated cost:} ((( sections.total_cost | latex_escape )))
+\textbf{Total estimated cost:}
+((( sections.total_cost | latex_escape )))
 ((* endif *))
+
 ((* endif *))
 
 ((* if sections.notes *))
 \section*{Notes}
 ((( sections.notes | latex_escape )))
 ((* endif *))
-
-
 
 \end{multicols}
 
