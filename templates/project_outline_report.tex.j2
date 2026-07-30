@@ -43,6 +43,10 @@
 
 \sloppy
 
+% Table border settings.
+\setlength{\arrayrulewidth}{0.55pt}
+\setlength{\doublerulesep}{1.2pt}
+
 \titlespacing*{\section}{0pt}{0.75em}{0.3em}
 \titleformat{\section}
     {\large\bfseries}
@@ -119,50 +123,111 @@ Supporting members: & ((( sections.supporting_members | latex_escape ))) \\
 \section*{Project Description}
 ((( sections.description | latex_escape )))
 
+% ---------------- Deliverables ----------------
+
 ((* if sections.deliverables *))
 \section*{Deliverables}
-\begin{enumerate}[leftmargin=1.6em,itemsep=0.15em,topsep=0.1em]
-((* for deliverable in sections.deliverables *))
-    \item ((( deliverable | latex_escape )))
-((* endfor *))
-\end{enumerate}
-((* endif *))
 
-((* if sections.testing_items *))
-\section*{Testing and Verification}
-((* for item in sections.testing_items *))
-\textbf{((( item["Test or review"] | latex_escape )))}
-
-((( item["Purpose / acceptance criterion"] | latex_escape )))
-
-((* endfor *))
-((* endif *))
-
-((* if sections.timeline_items *))
-\section*{Timeline}
 \small
-\renewcommand{\arraystretch}{1.08}
-\begin{tabularx}{\columnwidth}{@{}>{\raggedright\arraybackslash}p{1.9cm}X@{}}
-\toprule
-\textbf{Period} & \textbf{Planned work} \\
-\midrule
-((* for item in sections.timeline_items *))
-((( item["Period"] | latex_escape ))) &
-((( item["Planned work"] | latex_escape ))) \\
+\renewcommand{\arraystretch}{1.18}
+
+\begin{tabularx}{\columnwidth}{
+    ||>{\centering\arraybackslash}p{0.8cm}
+    |>{\raggedright\arraybackslash}X||
+}
+\hline\hline
+\textbf{No.} & \textbf{Deliverable} \\
+\hline\hline
+((* for deliverable in sections.deliverables *))
+((( loop.index ))) &
+((( deliverable | latex_escape ))) \\
+\hline
 ((* endfor *))
-\bottomrule
+\hline
 \end{tabularx}
+
 \normalsize
 ((* endif *))
 
+% ---------------- Testing and verification ----------------
+
+((* if sections.testing_items *))
+\section*{Testing and Verification}
+
+\small
+\renewcommand{\arraystretch}{1.18}
+
+\begin{tabularx}{\columnwidth}{
+    ||>{\raggedright\arraybackslash}p{0.34\columnwidth}
+    |>{\raggedright\arraybackslash}X||
+}
+\hline\hline
+\textbf{Test or Review} &
+\textbf{Purpose / Acceptance Criterion} \\
+\hline\hline
+((* for item in sections.testing_items *))
+((( item["Test or review"] | latex_escape ))) &
+((( item["Purpose / acceptance criterion"] | latex_escape ))) \\
+\hline
+((* endfor *))
+\hline
+\end{tabularx}
+
+\normalsize
+((* endif *))
+
+% ---------------- Timeline ----------------
+
+((* if sections.timeline_items *))
+\section*{Timeline}
+
+\small
+\renewcommand{\arraystretch}{1.18}
+
+\begin{tabularx}{\columnwidth}{
+    ||>{\raggedright\arraybackslash}p{0.28\columnwidth}
+    |>{\raggedright\arraybackslash}X||
+}
+\hline\hline
+\textbf{Period} &
+\textbf{Planned Work} \\
+\hline\hline
+((* for item in sections.timeline_items *))
+((( item["Period"] | latex_escape ))) &
+((( item["Planned work"] | latex_escape ))) \\
+\hline
+((* endfor *))
+\hline
+\end{tabularx}
+
+\normalsize
+((* endif *))
+
+% ---------------- Technology ----------------
+
 ((* if sections.technology_items *))
 \section*{Technology}
+
+\small
+\renewcommand{\arraystretch}{1.18}
+
+\begin{tabularx}{\columnwidth}{
+    ||>{\raggedright\arraybackslash}p{0.34\columnwidth}
+    |>{\raggedright\arraybackslash}X||
+}
+\hline\hline
+\textbf{Technology / Method} &
+\textbf{Application} \\
+\hline\hline
 ((* for item in sections.technology_items *))
-\textbf{((( item["Technology / method"] | latex_escape )))}
-
-((( item["Application"] | latex_escape )))
-
+((( item["Technology / method"] | latex_escape ))) &
+((( item["Application"] | latex_escape ))) \\
+\hline
 ((* endfor *))
+\hline
+\end{tabularx}
+
+\normalsize
 ((* endif *))
 
 \end{multicols}
