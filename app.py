@@ -917,29 +917,42 @@ else:
     report_sections = project_completion_report_form()
 
 
-st.divider()
-st.subheader("Attachments")
+# Default values are needed because the PDF-generation code
+# refers to csv_file and image_files for every report type.
+csv_file = None
+image_files = []
 
-csv_file = st.file_uploader(
-    "Upload CSV data",
-    type=["csv"],
-    help="Optional. A chart and short table will be added to the report.",
-)
+# Project Outline Reports do not use CSV files or images.
+if report_type != "Project Outline Report":
+    st.divider()
+    st.subheader("Attachments")
 
-image_files = st.file_uploader(
-    "Upload images",
-    type=[
-        "png",
-        "jpg",
-        "jpeg",
-        "webp",
-        "bmp",
-        "tif",
-        "tiff",
-    ],
-    accept_multiple_files=True,
-    help="Optional. Upload photographs, screenshots, drawings or plots.",
-)
+    csv_file = st.file_uploader(
+        "Upload CSV data",
+        type=["csv"],
+        help=(
+            "Optional. A graph generated from the CSV data "
+            "will be added to the report."
+        ),
+    )
+
+    image_files = st.file_uploader(
+        "Upload images",
+        type=[
+            "png",
+            "jpg",
+            "jpeg",
+            "webp",
+            "bmp",
+            "tif",
+            "tiff",
+        ],
+        accept_multiple_files=True,
+        help=(
+            "Optional. Upload photographs, screenshots, "
+            "drawings or plots."
+        ),
+    )
 
 
 
