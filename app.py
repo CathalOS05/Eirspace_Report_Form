@@ -1011,15 +1011,18 @@ if st.button(
 
         safe_title = safe_report_title(report_subject)
 
-        # Example: RAT_001_VEGA_TEST
         full_report_name = f"{report_code}_{safe_title}"
 
         submission_folder = OUTPUT_DIR / full_report_name
         documents_folder = submission_folder / "submitted_documents"
 
+        # Remove any incomplete local copy left by an earlier failed attempt.
+        if submission_folder.exists():
+            shutil.rmtree(submission_folder)
+
         submission_folder.mkdir(
             parents=True,
-            exist_ok=False,
+            exist_ok=True,
         )
 
         documents_folder.mkdir(
