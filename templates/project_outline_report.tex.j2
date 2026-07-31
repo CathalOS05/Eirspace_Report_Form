@@ -69,28 +69,29 @@
 
 % ---------------- Full-width title ----------------
 
-\begin{minipage}[t]{0.84\textwidth}
-    {\LARGE\textbf{
+% Pull the title block slightly closer to the header.
+\vspace*{-0.65em}
+
+\noindent
+\begin{tabularx}{\textwidth}{@{}>{\raggedright\arraybackslash}X
+    >{\raggedleft\arraybackslash}m{1.45cm}@{}}
+
+    {\LARGE\bfseries
         ((( report_code | latex_escape )))
         --
         ((( report_title | latex_escape )))
-    }}\\[0.3em]
-
-\end{minipage}
-\hfill
-\begin{minipage}[t]{0.12\textwidth}
-    \raggedleft
-
+    }
+    &
     ((* if logo_path *))
     \includegraphics[
-        width=1.2cm,
-        height=1.2cm,
+        width=1.25cm,
+        height=1.25cm,
         keepaspectratio
     ]{((( logo_path )))}
     ((* endif *))
-\end{minipage}
+\end{tabularx}
 
-\vspace{0.2em}
+\vspace{0.05em}
 \hrule
 \vspace{0.2em}
 
